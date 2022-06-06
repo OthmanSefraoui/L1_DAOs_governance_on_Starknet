@@ -1,8 +1,7 @@
 %lang starknet
 
-from starkware.cairo.common.cairo_builtins import HashBuiltin, SignatureBuiltin, BitwiseBuiltin
+from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.hash import hash2
-from starkware.cairo.common.signature import verify_ecdsa_signature
 
 from starkware.cairo.common.math import assert_not_zero, assert_in_range, assert_le
 
@@ -27,8 +26,6 @@ from starkware.cairo.common.alloc import alloc
 from starkware.starknet.common.messages import send_message_to_l1
 
 from contracts.L2.token.IERC20 import IERC20
-
-from starkware.cairo.common.cairo_secp.signature import verify_eth_signature_uint256
 
 #
 # Declaring storage vars
@@ -64,7 +61,7 @@ end
 struct proposal_core_:
     member vote_start : felt
     member vote_end : felt
-    member proposal_hash : felt
+    member proposal_hash : Uint256
 end
 
 @storage_var
@@ -165,15 +162,6 @@ func actual_timestamp{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
     return (block_timestamp)
 end
 
-@view
-func compare_timestamp{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
-    timestamp_now : felt
-):
-    let (block_timestamp) = get_block_timestamp()
-    assert_le(0, block_timestamp)
-    return (1)
-end
-
 # ######## Constructor
 
 @constructor
@@ -271,19 +259,6 @@ func send_votes_toL1{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
 end
 
 @external
-func verify_l1_user{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    l1_user : felt, msg_hash : Uint256, r : Uint256, s : Uint256, v : felt
-):
-    alloc_locals
-    let (local bitwise_ptr : BitwiseBuiltin*) = alloc()
-    let (local keccak_ptr : felt*) = alloc()
-    verify_eth_signature_uint256{bitwise_ptr=bitwise_ptr, keccak_ptr=keccak_ptr}(
-        msg_hash, r, s, v, l1_user
-    )
-    return ()
-end
-
-@external
 func set_l1_address{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     l1_address : felt
 ):
@@ -294,7 +269,7 @@ end
 
 @external
 func create_proposal{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    execution_description_len : felt, execution_description : felt*
+    proposal_hash_ : Uint256
 ):
     alloc_locals
     let (current_proposal_id) = proposal_ids_len.read()
@@ -304,13 +279,9 @@ func create_proposal{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
     let (period) = voting_period.read()
     let vote_start = current_timestamp + delay
     let vote_end = vote_start + period
-    let (proposal_execution_hash) = hash_init()
-    let (proposal_execution_hash) = hash_update{hash_ptr=pedersen_ptr}(
-        proposal_execution_hash, execution_description, execution_description_len
-    )
     let proposal_vote_instance = proposal_vote(against_votes=0, for_votes=0, abstain_votes=0)
     let proposal_core_instance = proposal_core_(
-        vote_start=vote_start, vote_end=vote_end, proposal_hash=proposal_execution_hash.current_hash
+        vote_start=vote_start, vote_end=vote_end, proposal_hash=proposal_hash_
     )
     proposal_votes_storage.write(proposal_id, proposal_vote_instance)
     proposal_cores_storage.write(proposal_id, proposal_core_instance)
