@@ -166,16 +166,23 @@ end
 
 @constructor
 func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    l1_governor_address : felt, dummy_token_address : felt, delay : felt, period : felt
+    dummy_token_address : felt, delay : felt, period : felt
 ):
     voting_delay.write(delay)
     voting_period.write(period)
-    l1_governor_address_storage.write(l1_governor_address)
     dummy_token_address_storage.write(dummy_token_address)
     return ()
 end
 
 # ######## External functions
+
+@external
+func set_l1_governor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    l1_governor_address : felt
+):
+    l1_governor_address_storage.write(l1_governor_address)
+    return ()
+end
 
 @external
 func vote{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
@@ -252,8 +259,10 @@ func send_votes_toL1{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
     assert message_payload[0] = proposal_vote_instance.against_votes
     assert message_payload[1] = proposal_vote_instance.for_votes
     assert message_payload[2] = proposal_vote_instance.abstain_votes
+    assert message_payload[3] = proposal_core_instance.proposal_hash.low
+    assert message_payload[4] = proposal_core_instance.proposal_hash.high
     let (l1_governor) = l1_governor_address_storage.read()
-    send_message_to_l1(to_address=l1_governor, payload_size=3, payload=message_payload)
+    send_message_to_l1(to_address=l1_governor, payload_size=5, payload=message_payload)
     proposals_status_storage.write(proposal_id, 2)
     return ()
 end
@@ -274,6 +283,7 @@ func create_proposal{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
     alloc_locals
     let (current_proposal_id) = proposal_ids_len.read()
     let proposal_id = current_proposal_id + 1
+    proposal_ids_len.write(proposal_id)
     let (current_timestamp) = get_block_timestamp()
     let (delay) = voting_delay.read()
     let (period) = voting_period.read()

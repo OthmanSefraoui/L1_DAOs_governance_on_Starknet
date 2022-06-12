@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
-import "@openzeppelin/contracts/governance/Governor.sol";
-import "@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol";
-import "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
-import "@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
-import "@openzeppelin/contracts/governance/extensions/GovernorTimelockControl.sol";
-import "@openzeppelin/contracts/governance/extensions/GovernorSettings.sol";
+import "./open_zeppelin_contracts/governance/extensions/GovernorCountingSimple.sol";
+import "./open_zeppelin_contracts/governance/extensions/GovernorVotes.sol";
+import "./open_zeppelin_contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
+import "./open_zeppelin_contracts/governance/extensions/GovernorTimelockControl.sol";
+import "./open_zeppelin_contracts/governance/extensions/GovernorSettings.sol";
 
 contract ProtocolGovernor is
     Governor,
@@ -21,9 +20,11 @@ contract ProtocolGovernor is
         TimelockController _timelock,
         uint256 _quorumPercentage,
         uint256 _votingPeriod,
-        uint256 _votingDelay
+        uint256 _votingDelay,
+        address starknetCore,
+        uint256 l2Governor
     )
-        Governor("ProtocolGovernor")
+        Governor("ProtocolGovernor", starknetCore, l2Governor)
         GovernorSettings(_votingDelay, _votingPeriod, 0)
         GovernorVotes(_token)
         GovernorVotesQuorumFraction(_quorumPercentage)
@@ -84,6 +85,30 @@ contract ProtocolGovernor is
         string memory description
     ) public override(Governor, IGovernor) returns (uint256) {
         return super.propose(targets, values, calldatas, description);
+    }
+
+    function receiveProposalAndVotes(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        string memory description,
+        uint256 votesAgainst,
+        uint256 votesFor,
+        uint256 votesAbstain,
+        uint256 proposalIdLow,
+        uint256 proposalIdHigh
+    ) public override(Governor) {
+        super.receiveProposalAndVotes(
+            targets,
+            values,
+            calldatas,
+            description,
+            votesAgainst,
+            votesFor,
+            votesAbstain,
+            proposalIdLow,
+            proposalIdHigh
+        );
     }
 
     function proposalThreshold()
