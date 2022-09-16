@@ -24,53 +24,53 @@ from starkware.starknet.common.messages import send_message_to_l1
 
 from starkware.cairo.common.cairo_secp.signature import verify_eth_signature_uint256
 from starkware.cairo.common.cairo_keccak.keccak import finalize_keccak
-#
-# Declaring storage vars
-# Storage vars are by default not visible through the ABI. They are similar to "private" variables in Solidity
-#
+//
+// Declaring storage vars
+// Storage vars are by default not visible through the ABI. They are similar to "private" variables in Solidity
+//
 
 @storage_var
-func l1_addresses_storage(player_address : felt) -> (l1_address : felt):
-end
+func l1_addresses_storage(player_address: felt) -> (l1_address: felt) {
+}
 
-#
-# Declaring getters
-# Public variables should be declared explicitly with a getter
-#
+//
+// Declaring getters
+// Public variables should be declared explicitly with a getter
+//
 
 @view
-func l1_addresses{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    player_address : felt
-) -> (l1_address : felt):
-    let (l1_address) = l1_addresses_storage.read(player_address)
-    return (l1_address)
-end
+func l1_addresses{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    player_address: felt
+) -> (l1_address: felt) {
+    let (l1_address) = l1_addresses_storage.read(player_address);
+    return (l1_address,);
+}
 
-# ######## Constructor
+// ######## Constructor
 
 @constructor
-func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
-    return ()
-end
+func constructor{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() {
+    return ();
+}
 
-# ######## External functions
+// ######## External functions
 
 @external
-func verify_l1_user{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    l1_user : felt, msg_hash : Uint256, r : Uint256, s : Uint256, v : felt
-):
-    alloc_locals
-    let (local bitwise_ptr : BitwiseBuiltin*) = alloc()
-    # let (local keccak_ptr_start : felt*) = alloc()
-    let (local keccak_ptr_start) = alloc()
-    let keccak_ptr = keccak_ptr_start
+func verify_l1_user{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    l1_user: felt, msg_hash: Uint256, r: Uint256, s: Uint256, v: felt
+) {
+    alloc_locals;
+    let (local bitwise_ptr: BitwiseBuiltin*) = alloc();
+    // let (local keccak_ptr_start : felt*) = alloc()
+    let (local keccak_ptr_start) = alloc();
+    let keccak_ptr = keccak_ptr_start;
     verify_eth_signature_uint256{bitwise_ptr=bitwise_ptr, keccak_ptr=keccak_ptr}(
         msg_hash, r, s, v, l1_user
-    )
+    );
     finalize_keccak{bitwise_ptr=bitwise_ptr}(
         keccak_ptr_start=keccak_ptr_start, keccak_ptr_end=keccak_ptr
-    )
-    let (caller_address) = get_caller_address()
-    l1_addresses_storage.write(caller_address, l1_user)
-    return ()
-end
+    );
+    let (caller_address) = get_caller_address();
+    l1_addresses_storage.write(caller_address, l1_user);
+    return ();
+}
